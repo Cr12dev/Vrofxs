@@ -8,15 +8,15 @@ void Axis::setupAxis() {
     float axisVertices[] = {
         // X axis - Red
         0.0f, 0.0f, 0.0f,  1.0f, 0.0f, 0.0f,
-        5.0f, 0.0f, 0.0f,  1.0f, 0.0f, 0.0f,
+        2.0f, 0.0f, 0.0f,  1.0f, 0.0f, 0.0f,
         
         // Y axis - Green
         0.0f, 0.0f, 0.0f,  0.0f, 1.0f, 0.0f,
-        0.0f, 5.0f, 0.0f,  0.0f, 1.0f, 0.0f,
+        0.0f, 2.0f, 0.0f,  0.0f, 1.0f, 0.0f,
         
         // Z axis - Blue
         0.0f, 0.0f, 0.0f,  0.0f, 0.0f, 1.0f,
-        0.0f, 0.0f, 5.0f,  0.0f, 0.0f, 1.0f
+        0.0f, 0.0f, 2.0f,  0.0f, 0.0f, 1.0f
     };
     
     glGenVertexArrays(1, &VAO);
