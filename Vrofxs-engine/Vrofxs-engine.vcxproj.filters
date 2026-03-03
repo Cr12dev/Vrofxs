@@ -16,6 +16,9 @@
     <Filter Include="Archivos de origen\imgui">
       <UniqueIdentifier>{2fd20e79-d3ab-4a74-9472-87952877d31e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Archivos de origen\shaders">
+      <UniqueIdentifier>{7cf6d870-3774-43b1-b449-03c75b997ef3}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Vrofxs-engine.cpp">
@@ -74,5 +77,25 @@
     <ClInclude Include="Shader.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="shaders\axis.frag">
+      <Filter>Archivos de origen\shaders</Filter>
+    </None>
+    <None Include="shaders\axis.vert">
+      <Filter>Archivos de origen\shaders</Filter>
+    </None>
+    <None Include="shaders\cube.frag">
+      <Filter>Archivos de origen\shaders</Filter>
+    </None>
+    <None Include="shaders\cube.vert">
+      <Filter>Archivos de origen\shaders</Filter>
+    </None>
+    <None Include="shaders\screen.frag">
+      <Filter>Archivos de origen\shaders</Filter>
+    </None>
+    <None Include="shaders\screen.vert">
+      <Filter>Archivos de origen\shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

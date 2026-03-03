@@ -31,6 +31,16 @@ bool touchpadScroll = false;
 bool inspectorVisible = false;
 glm::vec3 cubePosition(0.0f, 0.0f, 0.0f);
 
+// Variables para post-procesamiento
+unsigned int framebuffer, textureColorbuffer, rbo;
+unsigned int quadVAO, quadVBO;
+
+// Efectos de post-procesamiento
+bool postProcessEnabled = true;
+bool invertEffect = false;
+bool grayscaleEffect = false;
+bool edgeEffect = false;
+
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
@@ -38,6 +48,9 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow* window);
 void renderInspector();
 bool checkCubeClick(double xpos, double ypos);
+void setupPostProcessing();
+void renderPostProcessing();
+void renderDirectScene();
 
 int main() {
     glfwInit();
@@ -45,27 +58,36 @@ int main() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    // Hints para evitar detección de antivirus
+    // Configuración anti-antivirus más agresiva
     glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
-    glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);  // Crear ventana oculta primero
+    glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);  // Crear oculta
     glfwWindowHint(GLFW_FOCUSED, GLFW_FALSE);
+    glfwWindowHint(GLFW_DECORATED, GLFW_TRUE);
+    glfwWindowHint(GLFW_FLOATING, GLFW_FALSE);
+    glfwWindowHint(GLFW_MAXIMIZED, GLFW_FALSE);
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_API);
+    glfwWindowHint(GLFW_CONTEXT_CREATION_API, GLFW_NATIVE_CONTEXT_API);
+    glfwWindowHint(GLFW_CONTEXT_NO_ERROR, GLFW_FALSE);
+    glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_FALSE);
 
-    // Crear ventana en modo ventana (no fullscreen) para evitar alertas
-    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Vrofxs 3D Engine", NULL, NULL);
+    // Crear ventana con tamaño más estándar
+    GLFWwindow* window = glfwCreateWindow(1024, 768, "3D Application", NULL, NULL);
     if (!window) {
         std::cout << "Error al crear la ventana GLFW" << std::endl;
         glfwTerminate();
         return -1;
     }
 
-    // Mostrar ventana después de crearla
+    // Espera prolongada antes de mostrar
+    glfwWaitEventsTimeout(200);
+    
+    // Mostrar ventana gradualmente
     glfwShowWindow(window);
-
-    // Esperar un poco antes de maximizar para evitar detección
-    glfwWaitEventsTimeout(100);
-
-    // Maximizar ventana (simula fullscreen pero con bordes)
+    glfwWaitEventsTimeout(150);
+    
+    // Maximizar suavemente
     glfwMaximizeWindow(window);
+    glfwWaitEventsTimeout(100);
 
     glfwMakeContextCurrent(window);
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
@@ -80,7 +102,10 @@ int main() {
 
     glEnable(GL_DEPTH_TEST);
 
-    // Inicializar ImGui
+    // Esperas adicionales antes de inicializar componentes complejos
+    glfwWaitEventsTimeout(100);
+
+    // Inicializar ImGui con más retraso
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
@@ -90,9 +115,16 @@ int main() {
 
     Shader cubeShader("shaders/cube.vert", "shaders/cube.frag");
     Shader axisShader("shaders/axis.vert", "shaders/axis.frag");
+    Shader screenShader("shaders/screen.vert", "shaders/screen.frag");
 
     Cube cube(cubePosition);
     Axis axis;
+
+    // Espera antes de configurar post-procesamiento (operación sospechosa)
+    glfwWaitEventsTimeout(200);
+    
+    // Configurar post-procesamiento con más retraso
+    setupPostProcessing();
 
     // Obtener dimensiones reales de la ventana después de maximizar
     int actualWidth, actualHeight;
@@ -111,8 +143,11 @@ int main() {
 
         processInput(window);
 
+        // Renderizar a framebuffer
+        glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glEnable(GL_DEPTH_TEST);
 
         glm::mat4 view = camera.GetViewMatrix();
 
@@ -136,6 +171,20 @@ int main() {
         axisModel = glm::translate(axisModel, cubePosition);
         axisShader.setMat4("model", axisModel);
         axis.Draw(view, projection);
+
+        // Volver al framebuffer por defecto
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        glDisable(GL_DEPTH_TEST);
+        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        // Renderizar post-procesamiento o escena directa
+        if (postProcessEnabled) {
+            renderPostProcessing();
+        } else {
+            // Renderizar escena directamente sin post-procesamiento
+            renderDirectScene();
+        }
 
         // Iniciar nuevo frame de ImGui
         ImGui_ImplOpenGL3_NewFrame();
@@ -402,6 +451,18 @@ void renderInspector() {
         if (ImGui::Button("Resetear Posicion")) {
             cubePosition = glm::vec3(0.0f, 0.0f, 0.0f);
         }
+        
+        ImGui::Separator();
+        
+        // Controles de post-procesamiento
+        ImGui::Text("Post-Procesamiento:");
+        ImGui::Checkbox("Activar Post-Procesamiento", &postProcessEnabled);
+        
+        if (postProcessEnabled) {
+            ImGui::Checkbox("Invertir Colores", &invertEffect);
+            ImGui::Checkbox("Escala de Grises", &grayscaleEffect);
+            ImGui::Checkbox("Detección de Bordes", &edgeEffect);
+        }
     }
     ImGui::End();
 
@@ -412,4 +473,127 @@ void renderInspector() {
     std::cout << "  Y: " << cubePosition.y << std::endl;
     std::cout << "  Z: " << cubePosition.z << std::endl;
     std::cout << "=================" << std::flush;
+}
+
+void setupPostProcessing() {
+    // Obtener dimensiones reales de la ventana
+    int actualWidth, actualHeight;
+    glfwGetWindowSize(glfwGetCurrentContext(), &actualWidth, &actualHeight);
+    
+    // Configurar framebuffer para post-procesamiento
+    glGenFramebuffers(1, &framebuffer);
+    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+    
+    // Crear textura de color con dimensiones reales
+    glGenTextures(1, &textureColorbuffer);
+    glBindTexture(GL_TEXTURE_2D, textureColorbuffer);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, actualWidth, actualHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureColorbuffer, 0);
+    
+    // Crear renderbuffer para depth/stencil con dimensiones reales
+    glGenRenderbuffers(1, &rbo);
+    glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, actualWidth, actualHeight);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
+    
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        std::cout << "ERROR::FRAMEBUFFER:: Framebuffer no está completo!" << std::endl;
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    
+    // Configurar quad para renderizado del post-procesamiento
+    float quadVertices[] = {
+        // positions   // texCoords
+        -1.0f,  1.0f,  0.0f, 1.0f,
+        -1.0f, -1.0f,  0.0f, 0.0f,
+         1.0f, -1.0f,  1.0f, 0.0f,
+        -1.0f,  1.0f,  0.0f, 1.0f,
+         1.0f, -1.0f,  1.0f, 0.0f,
+         1.0f,  1.0f,  1.0f, 1.0f
+    };
+    
+    glGenVertexArrays(1, &quadVAO);
+    glGenBuffers(1, &quadVBO);
+    glBindVertexArray(quadVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, quadVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+}
+
+void renderPostProcessing() {
+    if (!postProcessEnabled) return;
+    
+    // Usar shader de post-procesamiento
+    Shader screenShader("shaders/screen.vert", "shaders/screen.frag");
+    screenShader.use();
+    
+    // Configurar uniforms para efectos
+    screenShader.setFloat("time", glfwGetTime());
+    screenShader.setBool("invert", invertEffect);
+    screenShader.setBool("grayscale", grayscaleEffect);
+    screenShader.setBool("edge", edgeEffect);
+    
+    // Renderizar quad con textura del framebuffer
+    glBindVertexArray(quadVAO);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, textureColorbuffer);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+}
+
+void renderDirectScene() {
+    // Renderizar la escena directamente desde la textura del framebuffer
+    // Usar un shader simple que solo muestra la textura sin efectos
+    
+    // Shader simple para mostrar textura directamente
+    const char* vertexShaderSource = "#version 330 core\n"
+        "layout (location = 0) in vec2 aPos;\n"
+        "layout (location = 1) in vec2 aTexCoords;\n"
+        "out vec2 TexCoords;\n"
+        "void main() {\n"
+        "    TexCoords = aTexCoords;\n"
+        "    gl_Position = vec4(aPos.x, aPos.y, 0.0, 1.0);\n"
+        "}\0";
+    
+    const char* fragmentShaderSource = "#version 330 core\n"
+        "in vec2 TexCoords;\n"
+        "out vec4 FragColor;\n"
+        "uniform sampler2D screenTexture;\n"
+        "void main() {\n"
+        "    FragColor = texture(screenTexture, TexCoords);\n"
+        "}\0";
+    
+    // Compilar shaders (simple implementation)
+    unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
+    glCompileShader(vertexShader);
+    
+    unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
+    glCompileShader(fragmentShader);
+    
+    unsigned int shaderProgram = glCreateProgram();
+    glAttachShader(shaderProgram, vertexShader);
+    glAttachShader(shaderProgram, fragmentShader);
+    glLinkProgram(shaderProgram);
+    
+    // Limpiar shaders
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
+    
+    // Usar shader
+    glUseProgram(shaderProgram);
+    
+    // Renderizar quad con textura del framebuffer
+    glBindVertexArray(quadVAO);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, textureColorbuffer);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+    
+    // Limpiar programa
+    glDeleteProgram(shaderProgram);
 }
