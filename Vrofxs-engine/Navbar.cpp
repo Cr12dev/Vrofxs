@@ -1,25 +1,29 @@
-
-
 #include "Navbar.h"
 
+char buffer[128] = "";
+bool propertiesVisible = false;
 
 void renderNavbar()
 {
-    // Inicia la barra de menú principal
+    // Inicia la barra de menÃº principal
     if (ImGui::BeginMainMenuBar())
     {
-        // Menú Archivo
+        // MenÃº Archivo
         if (ImGui::BeginMenu("Archivo"))
         {
             if (ImGui::MenuItem("Nuevo")) {
-                // Acción: resetear cubo por ejemplo
+                // AcciÃ³n: resetear cubo por ejemplo
                 cubePosition = glm::vec3(0.0f);
             }
             if (ImGui::MenuItem("Abrir")) {
-                // Acción: abrir archivo (a implementar)
+                // AcciÃ³n: abrir archivo (a implementar)
             }
             if (ImGui::MenuItem("Guardar")) {
-                // Acción: guardar escena (a implementar)
+                // AcciÃ³n: guardar escena (a implementar)
+            }
+            if (ImGui::MenuItem("Properties")) {
+                printf("### Executing PROPERTIES ###");
+                propertiesVisible = true;
             }
             if (ImGui::MenuItem("Salir")) {
                 glfwSetWindowShouldClose(glfwGetCurrentContext(), true);
@@ -27,15 +31,15 @@ void renderNavbar()
             ImGui::EndMenu();
         }
 
-        // Menú Editar
+        // MenÃº Editar
         if (ImGui::BeginMenu("Editar"))
         {
-            if (ImGui::MenuItem("Copiar")) { /* acción */ }
-            if (ImGui::MenuItem("Pegar")) { /* acción */ }
+            if (ImGui::MenuItem("Copiar")) { /* acciÃ³n */ }
+            if (ImGui::MenuItem("Pegar")) { /* acciÃ³n */ }
             ImGui::EndMenu();
         }
 
-        // Menú Ayuda
+        // MenÃº Ayuda
         if (ImGui::BeginMenu("Ayuda"))
         {
             if (ImGui::MenuItem("Acerca de")) {
@@ -45,5 +49,51 @@ void renderNavbar()
         }
 
         ImGui::EndMainMenuBar();
+    }
+}
+
+void renderProperties() {
+    if (!propertiesVisible) return;
+
+    int windowWidth = SCR_WIDTH;
+    int windowheight = SCR_HEIGHT;
+
+    // Configuracion de la ventana
+    ImGui::SetNextWindowPos(ImVec2(99, 100), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(windowWidth*3, windowheight - 100), ImGuiCond_Always);
+
+    ImGuiWindowFlags flags =
+        ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoCollapse |
+        ImGuiWindowFlags_NoMove;
+
+    if (ImGui::Begin("Properties", &propertiesVisible, flags)) {
+        ImGui::Text("Environment Properties");
+        ImGui::Separator();
+
+        // SecciÃ³n de Renderizado
+        if (ImGui::CollapsingHeader("Render Settings")) {
+            ImGui::Text("Opciones de renderizado:");
+            
+            static bool wireframe = false;
+            if (ImGui::Checkbox("Wireframe Mode", &wireframe)) {
+                if (wireframe) {
+                    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+                } else {
+                    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+                }
+            }
+
+            static bool showGrid = false;
+            ImGui::Checkbox("Mostrar Grid", &showGrid);
+
+            ImGui::ColorEdit3("Color de Fondo", (float*)&backgroundColor);
+        }
+
+        ImGui::Separator();
+
+        
+
+    ImGui::End();
     }
 }

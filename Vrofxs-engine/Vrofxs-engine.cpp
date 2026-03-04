@@ -1,7 +1,6 @@
 #include "Main.h"
 
-const unsigned int SCR_WIDTH = 800;
-const unsigned int SCR_HEIGHT = 600;
+
 
 Camera camera(glm::vec3(0.0f, 0.0f, 5.0f));
 float lastX = SCR_WIDTH / 2.0f;
@@ -17,6 +16,7 @@ bool touchpadScroll = false;
 bool inspectorVisible = false;
 
 glm::vec3 cubePosition(0.0f, 0.0f, 0.0f);
+glm::vec3 backgroundColor(0.2f, 0.4f, 0.8f);
 
 // Variables para post-procesamiento
 unsigned int framebuffer, textureColorbuffer, rbo;
@@ -28,19 +28,6 @@ bool invertEffect = false;
 bool grayscaleEffect = false;
 bool edgeEffect = false;
 
-
-
-void framebuffer_size_callback(GLFWwindow* window, int width, int height);
-void mouse_callback(GLFWwindow* window, double xpos, double ypos);
-void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
-void processInput(GLFWwindow* window);
-void renderInspector();
-bool checkCubeClick(double xpos, double ypos);
-void setupPostProcessing();
-void renderPostProcessing();
-void renderDirectScene(Shader& screenShader);
-void renderNavbar();
 
 int main() {
     glfwInit();
@@ -125,7 +112,7 @@ int main() {
         // Renderizar a framebuffer (FONDO ESCENARIO)
         glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
         //glClearColor(0.1f, 0.1f, 0.1f, 1.0f); //Negro default
-        glClearColor(0.2f, 0.4f, 0.8f, 1.0f); //Azul cielo
+        glClearColor(backgroundColor.r, backgroundColor.g, backgroundColor.b, 1.0f); //Color dinámico
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glEnable(GL_DEPTH_TEST);
 
@@ -155,7 +142,7 @@ int main() {
         // Volver al framebuffer por defecto
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glDisable(GL_DEPTH_TEST);
-        glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+        glClearColor(backgroundColor.r * 0.8f, backgroundColor.g * 0.8f, backgroundColor.b * 0.8f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
         // Renderizar post-procesamiento o escena directa
@@ -175,6 +162,7 @@ int main() {
         // Renderizar inspector con ImGui
         renderNavbar();
         renderInspector();
+        renderProperties();
         
 
         // Renderizar ImGui
