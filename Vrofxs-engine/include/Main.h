@@ -18,6 +18,8 @@
 #include "Axis.h"
 #include "Navbar.h"
 #include "GridCalc.h"
+#include "Sun.h"
+#include "Light.h"
 
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;

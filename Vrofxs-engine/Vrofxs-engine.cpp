@@ -81,9 +81,11 @@ int main() {
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330");
 
-    Shader cubeShader("shaders/cube.vert", "shaders/cube.frag");
+    Shader cubeShader("shaders/cube_light.vert", "shaders/cube_light.frag");
     Shader axisShader("shaders/axis.vert", "shaders/axis.frag");
     Shader screenShader("shaders/screen.vert", "shaders/screen.frag");
+    Shader sunShader("shaders/sun.vert", "shaders/sun.frag");
+    Shader lightShader("shaders/cube_light.vert", "shaders/cube_light.frag");
     gridShader = Shader("shaders/grid.vert", "shaders/grid.frag");
     
     // Check if grid shader compiled successfully
@@ -100,6 +102,7 @@ int main() {
 
     Cube cube(cubePosition);
     Axis axis;
+    Sun sun(glm::vec3(0.0f, 10.0f, -5.0f), glm::vec3(1.0f, 0.9f, 0.0f), 1.0f);
 
     // Espera antes de configurar post-procesamiento (operación sospechosa)
     glfwWaitEventsTimeout(200);
@@ -133,13 +136,16 @@ int main() {
 
         glm::mat4 view = camera.GetViewMatrix();
 
-        // Renderizar cubo
-        cubeShader.use();
-        cubeShader.setMat4("projection", projection);
-        cubeShader.setMat4("view", view);
+        // Renderizar cubo con iluminación
+        lightShader.use();
+        lightShader.setMat4("projection", projection);
+        lightShader.setMat4("view", view);
         cube.SetPosition(cubePosition);
-        cubeShader.setMat4("model", cube.GetModelMatrix());
-        cubeShader.setVec3("lightPos", glm::vec3(2.0f, 2.0f, 2.0f));
+        lightShader.setMat4("model", cube.GetModelMatrix());
+        lightShader.setVec3("lightPos", glm::vec3(2.0f, 2.0f, 2.0f));
+        lightShader.setVec3("lightColor", glm::vec3(1.0f, 1.0f, 1.0f));
+        lightShader.setVec3("objectColor", glm::vec3(0.5f, 0.3f, 0.8f));
+        lightShader.setVec3("viewPos", camera.Position);
         cubeShader.setVec3("lightColor", glm::vec3(1.0f, 1.0f, 1.0f));
         cubeShader.setVec3("objectColor", glm::vec3(0.5f, 0.3f, 0.8f));
         cubeShader.setVec3("viewPos", camera.Position);
@@ -185,6 +191,9 @@ int main() {
         if (showGrid) {
             renderGrid(size = 20, spacing = 1.0f);
         }
+        
+        // Renderizar el sol
+        sun.render(sunShader, camera.GetViewMatrix(), glm::perspective(glm::radians(camera.Zoom), (float)actualWidth / (float)actualHeight, 0.1f, 100.0f));
         
 
         // Renderizar ImGui

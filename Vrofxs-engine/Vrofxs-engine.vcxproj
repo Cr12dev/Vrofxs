@@ -140,16 +140,20 @@
     <ClCompile Include="imgui\imgui_impl_opengl3.cpp" />
     <ClCompile Include="imgui\imgui_tables.cpp" />
     <ClCompile Include="imgui\imgui_widgets.cpp" />
+    <ClCompile Include="Light.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="Navbar.cpp" />
     <ClCompile Include="Shader.cpp" />
+    <ClCompile Include="Sun.cpp" />
     <ClCompile Include="Vrofxs-engine.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Axis.h" />
     <ClInclude Include="Camera.h" />
-    <ClInclude Include="Cube.h" />
     <ClInclude Include="GridCalc.h" />
+    <ClInclude Include="include\Cube.h" />
+    <ClInclude Include="include\Light.h" />
+    <ClInclude Include="include\Sun.h" />
     <ClInclude Include="Inspector.h" />
     <ClInclude Include="Main.h" />
     <ClInclude Include="Mesh.h" />
