@@ -9,6 +9,7 @@
 extern glm::vec3 backgroundColor;
 extern Camera camera;
 extern float deltaTime;
+extern bool showGrid;
 
 void renderProperties();
 void renderNavbar();

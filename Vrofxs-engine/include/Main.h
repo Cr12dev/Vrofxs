@@ -7,6 +7,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <string>
+#include <vector>
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
@@ -15,7 +16,6 @@
 #include "Camera.h"
 #include "Cube.h"
 #include "Axis.h"
-#include "Main.h"
 #include "Navbar.h"
 #include "GridCalc.h"
 
@@ -27,6 +27,7 @@ extern glm::vec3 backgroundColor;
 extern Camera camera;
 extern float deltaTime;
 extern Shader gridShader;
+extern bool showGrid;
 
 void renderGrid(int size, float spacing);
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);

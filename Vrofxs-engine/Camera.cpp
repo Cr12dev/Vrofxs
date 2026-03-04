@@ -1,4 +1,4 @@
-#include "Camera.h"
+#include "include/Camera.h"
 #include <iostream>
 
 Camera::Camera(glm::vec3 position, glm::vec3 up, float yaw, float pitch) : Front(glm::vec3(0.0f, 0.0f, -1.0f)), MovementSpeed(SPEED), MouseSensitivity(SENSITIVITY), Zoom(ZOOM) {
@@ -31,6 +31,13 @@ void Camera::ProcessMouseMovement(float xoffset, float yoffset, GLboolean constr
 
     Yaw += xoffset;
     Pitch += yoffset;
+
+    // Debug output to verify rotation is working
+    static int debugCounter = 0;
+    debugCounter++;
+    if (debugCounter % 60 == 0) { // Print every 60 frames
+        std::cout << "Camera Yaw: " << Yaw << ", Pitch: " << Pitch << std::endl;
+    }
 
     if (constrainPitch) {
         if (Pitch > 89.0f)

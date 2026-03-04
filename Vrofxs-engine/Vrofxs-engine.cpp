@@ -1,4 +1,4 @@
-#include "Main.h"
+#include "include/Main.h"
 
 
 
@@ -17,7 +17,8 @@ bool inspectorVisible = false;
 
 glm::vec3 cubePosition(0.0f, 0.0f, 0.0f);
 glm::vec3 backgroundColor(0.2f, 0.4f, 0.8f);
-Shader gridShader("shaders/grid.vert", "shaders/grid.frag");
+Shader gridShader; // Declare but don't initialize yet
+bool showGrid = true; // Show grid by default
 
 // Variables para post-procesamiento
 unsigned int framebuffer, textureColorbuffer, rbo;
@@ -83,6 +84,19 @@ int main() {
     Shader cubeShader("shaders/cube.vert", "shaders/cube.frag");
     Shader axisShader("shaders/axis.vert", "shaders/axis.frag");
     Shader screenShader("shaders/screen.vert", "shaders/screen.frag");
+    gridShader = Shader("shaders/grid.vert", "shaders/grid.frag");
+    
+    // Check if grid shader compiled successfully
+    if (!gridShader.ID) {
+        std::cout << "ERROR: Grid shader failed to compile!" << std::endl;
+        std::cout << "Please check grid.vert and grid.frag files for syntax errors." << std::endl;
+    } else {
+        std::cout << "SUCCESS: Grid shader loaded successfully!" << std::endl;
+    }
+    
+    // Initialize grid with safe default values
+    gridVAO = 0;
+    gridVBO = 0;
 
     Cube cube(cubePosition);
     Axis axis;
@@ -166,7 +180,11 @@ int main() {
         renderNavbar();
         renderInspector();
         renderProperties();
-        renderGrid(size = 1, spacing = 1.0f);
+        
+        // Only render grid if enabled
+        if (showGrid) {
+            renderGrid(size = 20, spacing = 1.0f);
+        }
         
 
         // Renderizar ImGui
@@ -222,15 +240,15 @@ void processInput(GLFWwindow* window) {
         cubePosition.z -= cubeSpeed;
 
     // Rotación de cámara con teclas
-    float cameraRotationSpeed = 50.0f * deltaTime;
+    float cameraRotationSpeed = 100.0f * deltaTime;
     if (glfwGetKey(window, GLFW_KEY_J) == GLFW_PRESS)
-        camera.ProcessMouseMovement(-cameraRotationSpeed, 0.0f, false);  // Izquierda
+        camera.ProcessMouseMovement(-cameraRotationSpeed, 0.0f, true);  // Izquierda
     if (glfwGetKey(window, GLFW_KEY_L) == GLFW_PRESS)
-        camera.ProcessMouseMovement(cameraRotationSpeed, 0.0f, false);   // Derecha
+        camera.ProcessMouseMovement(cameraRotationSpeed, 0.0f, true);   // Derecha
     if (glfwGetKey(window, GLFW_KEY_I) == GLFW_PRESS)
-        camera.ProcessMouseMovement(0.0f, -cameraRotationSpeed, false);  // Arriba
+        camera.ProcessMouseMovement(0.0f, -cameraRotationSpeed, true);  // Arriba
     if (glfwGetKey(window, GLFW_KEY_K) == GLFW_PRESS)
-        camera.ProcessMouseMovement(0.0f, cameraRotationSpeed, false);   // Abajo
+        camera.ProcessMouseMovement(0.0f, cameraRotationSpeed, true);   // Abajo
 }
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
@@ -265,7 +283,7 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
         float xoffset = xpos - lastX;
         float yoffset = lastY - ypos;
 
-        camera.ProcessMouseMovement(xoffset, yoffset);
+        camera.ProcessMouseMovement(xoffset, yoffset, true);
 
         lastX = xpos;
         lastY = ypos;

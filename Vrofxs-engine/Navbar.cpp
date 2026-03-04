@@ -1,4 +1,4 @@
-#include "Navbar.h"
+#include "include/Navbar.h"
 
 char buffer[128] = "";
 bool propertiesVisible = false;
@@ -84,10 +84,36 @@ void renderProperties() {
                 }
             }
 
-            static bool showGrid = false;
             ImGui::Checkbox("Mostrar Grid", &showGrid);
 
             ImGui::ColorEdit3("Color de Fondo", (float*)&backgroundColor);
+        }
+
+        ImGui::Separator();
+
+        // Sección de Controles de Cámara
+        if (ImGui::CollapsingHeader("Camera Controls")) {
+            ImGui::Text("Controles de cámara:");
+            
+            ImGui::Text("Movimiento:");
+            ImGui::BulletText("W/S - Adelante/Atrás");
+            ImGui::BulletText("A/D - Izquierda/Derecha");
+            ImGui::BulletText("Espacio/Shift - Subir/Bajar");
+            
+            ImGui::Text("Rotación:");
+            ImGui::BulletText("Botón derecho + arrastrar - Rotar vista");
+            ImGui::BulletText("J/L - Rotar izquierda/derecha");
+            ImGui::BulletText("I/K - Rotar arriba/abajo");
+            
+            ImGui::Text("Zoom:");
+            ImGui::BulletText("Scroll del ratón - Acercar/alejar");
+            
+            // Mostrar posición actual de la cámara
+            ImGui::Separator();
+            ImGui::Text("Posición Cámara:");
+            ImGui::Text("X: %.2f", camera.Position.x);
+            ImGui::Text("Y: %.2f", camera.Position.y);
+            ImGui::Text("Z: %.2f", camera.Position.z);
         }
 
         ImGui::Separator();
@@ -96,37 +122,4 @@ void renderProperties() {
 
     ImGui::End();
     }
-}
-
-unsigned int gridVAO, gridVBO;
-
-void renderGrid(int size, float spacing)
-{
-    // Setup grid if not already done or if parameters changed
-    static int lastSize = -1;
-    static float lastSpacing = -1.0f;
-
-    if (lastSize != size || lastSpacing != spacing) {
-        setupGrid(size, spacing);
-        lastSize = size;
-        lastSpacing = spacing;
-    }
-
-    gridShader.use();
-    gridShader.setVec3("lineColor", glm::vec3(0.7f, 0.7f, 0.7f)); // gris
-
-    // Get the current view and projection matrices
-    glm::mat4 view = camera.GetViewMatrix();
-    int width, height;
-    glfwGetWindowSize(glfwGetCurrentContext(), &width, &height);
-    glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)width / (float)height, 0.1f, 100.0f);
-
-    // Set matrices for the grid shader
-    gridShader.setMat4("view", view);
-    gridShader.setMat4("projection", projection);
-    gridShader.setMat4("model", glm::mat4(1.0f)); // Identity matrix for grid at origin
-
-    glBindVertexArray(gridVAO);
-    glDrawArrays(GL_LINES, 0, gridVertices.size() / 3);
-    glBindVertexArray(0);
 }

@@ -1,5 +1,6 @@
-uniform vec3 lineColor; // color que vas a setear desde C++
+#version 330 core
+uniform vec3 lineColor;
 out vec4 FragColor;
 void main() {
-    FragColor = vec4(lineColor, 1.0);
+    FragColor = vec4(lineColor, 0.8); // Slightly transparent for better visibility
 }

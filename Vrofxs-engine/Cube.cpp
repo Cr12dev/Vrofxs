@@ -1,4 +1,4 @@
-#include "Cube.h"
+#include "include/Cube.h"
 
 Cube::Cube(glm::vec3 pos) {
     position = pos;
