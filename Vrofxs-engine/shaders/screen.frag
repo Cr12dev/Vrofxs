@@ -31,7 +31,7 @@ void main()
         col = vec3(avg);
     }
 
-    // nvert
+    // invert
     if(invert)
     {
         col = vec3(1.0) - col;

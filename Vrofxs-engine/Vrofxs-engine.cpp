@@ -1,18 +1,4 @@
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
-#include <iostream>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-#include <string>
-#include <imgui.h>
-#include <imgui_impl_glfw.h>
-#include <imgui_impl_opengl3.h>
-
-#include "Shader.h"
-#include "Camera.h"
-#include "Cube.h"
-#include "Axis.h"
+#include "Main.h"
 
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
@@ -29,6 +15,7 @@ bool mousePressed = false;
 bool cameraLookEnabled = false;
 bool touchpadScroll = false;
 bool inspectorVisible = false;
+
 glm::vec3 cubePosition(0.0f, 0.0f, 0.0f);
 
 // Variables para post-procesamiento
@@ -41,6 +28,8 @@ bool invertEffect = false;
 bool grayscaleEffect = false;
 bool edgeEffect = false;
 
+
+
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
@@ -50,7 +39,8 @@ void renderInspector();
 bool checkCubeClick(double xpos, double ypos);
 void setupPostProcessing();
 void renderPostProcessing();
-void renderDirectScene();
+void renderDirectScene(Shader& screenShader);
+void renderNavbar();
 
 int main() {
     glfwInit();
@@ -58,17 +48,6 @@ int main() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    // Configuración anti-antivirus más agresiva
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
-    glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);  // Crear oculta
-    glfwWindowHint(GLFW_FOCUSED, GLFW_FALSE);
-    glfwWindowHint(GLFW_DECORATED, GLFW_TRUE);
-    glfwWindowHint(GLFW_FLOATING, GLFW_FALSE);
-    glfwWindowHint(GLFW_MAXIMIZED, GLFW_FALSE);
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_API);
-    glfwWindowHint(GLFW_CONTEXT_CREATION_API, GLFW_NATIVE_CONTEXT_API);
-    glfwWindowHint(GLFW_CONTEXT_NO_ERROR, GLFW_FALSE);
-    glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_FALSE);
 
     // Crear ventana con tamaño más estándar
     GLFWwindow* window = glfwCreateWindow(1024, 768, "3D Application", NULL, NULL);
@@ -80,11 +59,11 @@ int main() {
 
     // Espera prolongada antes de mostrar
     glfwWaitEventsTimeout(200);
-    
+
     // Mostrar ventana gradualmente
     glfwShowWindow(window);
     glfwWaitEventsTimeout(150);
-    
+
     // Maximizar suavemente
     glfwMaximizeWindow(window);
     glfwWaitEventsTimeout(100);
@@ -122,7 +101,7 @@ int main() {
 
     // Espera antes de configurar post-procesamiento (operación sospechosa)
     glfwWaitEventsTimeout(200);
-    
+
     // Configurar post-procesamiento con más retraso
     setupPostProcessing();
 
@@ -143,9 +122,10 @@ int main() {
 
         processInput(window);
 
-        // Renderizar a framebuffer
+        // Renderizar a framebuffer (FONDO ESCENARIO)
         glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        //glClearColor(0.1f, 0.1f, 0.1f, 1.0f); //Negro default
+        glClearColor(0.2f, 0.4f, 0.8f, 1.0f); //Azul cielo
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glEnable(GL_DEPTH_TEST);
 
@@ -181,9 +161,10 @@ int main() {
         // Renderizar post-procesamiento o escena directa
         if (postProcessEnabled) {
             renderPostProcessing();
-        } else {
+        }
+        else {
             // Renderizar escena directamente sin post-procesamiento
-            renderDirectScene();
+            renderDirectScene(screenShader);
         }
 
         // Iniciar nuevo frame de ImGui
@@ -192,7 +173,9 @@ int main() {
         ImGui::NewFrame();
 
         // Renderizar inspector con ImGui
+        renderNavbar();
         renderInspector();
+        
 
         // Renderizar ImGui
         ImGui::Render();
@@ -399,15 +382,26 @@ bool checkCubeClick(double xpos, double ypos) {
     return distance < clickThreshold;
 }
 
+/* --- Renderizar panel inspector de objeto ---*/
 void renderInspector() {
     if (!inspectorVisible) return;
 
+    int windowWidth = SCR_WIDTH;
+    int windowheight = SCR_HEIGHT;
+
     // Configurar ventana del inspector
-    ImGui::SetNextWindowPos(ImVec2(20, 20), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSize(ImVec2(300, 200), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowPos(ImVec2(windowWidth*3-100, 0), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(300, windowheight*3-10), ImGuiCond_Always);
+
+    // ImGui flags
+    ImGuiWindowFlags flags =
+        ImGuiWindowFlags_NoResize |
+        ImGuiWindowFlags_NoCollapse |
+        ImGuiWindowFlags_NoTitleBar |
+        ImGuiWindowFlags_NoMove;
 
     // Crear ventana del inspector
-    if (ImGui::Begin("Inspector", &inspectorVisible, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse)) {
+    if (ImGui::Begin("Inspector", &inspectorVisible, flags)) {
         ImGui::Text("Posicion del Cubo:");
 
         // Mostrar coordenadas X, Y, Z
@@ -451,13 +445,13 @@ void renderInspector() {
         if (ImGui::Button("Resetear Posicion")) {
             cubePosition = glm::vec3(0.0f, 0.0f, 0.0f);
         }
-        
+
         ImGui::Separator();
-        
+
         // Controles de post-procesamiento
         ImGui::Text("Post-Procesamiento:");
         ImGui::Checkbox("Activar Post-Procesamiento", &postProcessEnabled);
-        
+
         if (postProcessEnabled) {
             ImGui::Checkbox("Invertir Colores", &invertEffect);
             ImGui::Checkbox("Escala de Grises", &grayscaleEffect);
@@ -479,11 +473,11 @@ void setupPostProcessing() {
     // Obtener dimensiones reales de la ventana
     int actualWidth, actualHeight;
     glfwGetWindowSize(glfwGetCurrentContext(), &actualWidth, &actualHeight);
-    
+
     // Configurar framebuffer para post-procesamiento
     glGenFramebuffers(1, &framebuffer);
     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-    
+
     // Crear textura de color con dimensiones reales
     glGenTextures(1, &textureColorbuffer);
     glBindTexture(GL_TEXTURE_2D, textureColorbuffer);
@@ -491,18 +485,18 @@ void setupPostProcessing() {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureColorbuffer, 0);
-    
+
     // Crear renderbuffer para depth/stencil con dimensiones reales
     glGenRenderbuffers(1, &rbo);
     glBindRenderbuffer(GL_RENDERBUFFER, rbo);
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, actualWidth, actualHeight);
     glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, rbo);
-    
+
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
         std::cout << "ERROR::FRAMEBUFFER:: Framebuffer no está completo!" << std::endl;
     }
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    
+
     // Configurar quad para renderizado del post-procesamiento
     float quadVertices[] = {
         // positions   // texCoords
@@ -513,7 +507,7 @@ void setupPostProcessing() {
          1.0f, -1.0f,  1.0f, 0.0f,
          1.0f,  1.0f,  1.0f, 1.0f
     };
-    
+
     glGenVertexArrays(1, &quadVAO);
     glGenBuffers(1, &quadVBO);
     glBindVertexArray(quadVAO);
@@ -527,17 +521,17 @@ void setupPostProcessing() {
 
 void renderPostProcessing() {
     if (!postProcessEnabled) return;
-    
+
     // Usar shader de post-procesamiento
     Shader screenShader("shaders/screen.vert", "shaders/screen.frag");
     screenShader.use();
-    
+
     // Configurar uniforms para efectos
     screenShader.setFloat("time", glfwGetTime());
     screenShader.setBool("invert", invertEffect);
     screenShader.setBool("grayscale", grayscaleEffect);
     screenShader.setBool("edge", edgeEffect);
-    
+
     // Renderizar quad con textura del framebuffer
     glBindVertexArray(quadVAO);
     glActiveTexture(GL_TEXTURE0);
@@ -545,55 +539,23 @@ void renderPostProcessing() {
     glDrawArrays(GL_TRIANGLES, 0, 6);
 }
 
-void renderDirectScene() {
-    // Renderizar la escena directamente desde la textura del framebuffer
-    // Usar un shader simple que solo muestra la textura sin efectos
-    
-    // Shader simple para mostrar textura directamente
-    const char* vertexShaderSource = "#version 330 core\n"
-        "layout (location = 0) in vec2 aPos;\n"
-        "layout (location = 1) in vec2 aTexCoords;\n"
-        "out vec2 TexCoords;\n"
-        "void main() {\n"
-        "    TexCoords = aTexCoords;\n"
-        "    gl_Position = vec4(aPos.x, aPos.y, 0.0, 1.0);\n"
-        "}\0";
-    
-    const char* fragmentShaderSource = "#version 330 core\n"
-        "in vec2 TexCoords;\n"
-        "out vec4 FragColor;\n"
-        "uniform sampler2D screenTexture;\n"
-        "void main() {\n"
-        "    FragColor = texture(screenTexture, TexCoords);\n"
-        "}\0";
-    
-    // Compilar shaders (simple implementation)
-    unsigned int vertexShader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
-    glCompileShader(vertexShader);
-    
-    unsigned int fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fragmentShader, 1, &fragmentShaderSource, NULL);
-    glCompileShader(fragmentShader);
-    
-    unsigned int shaderProgram = glCreateProgram();
-    glAttachShader(shaderProgram, vertexShader);
-    glAttachShader(shaderProgram, fragmentShader);
-    glLinkProgram(shaderProgram);
-    
-    // Limpiar shaders
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
-    
-    // Usar shader
-    glUseProgram(shaderProgram);
-    
-    // Renderizar quad con textura del framebuffer
+void renderDirectScene(Shader& screenShader)
+{
+    screenShader.use();
+
+    // Desactivar todos los efectos
+    screenShader.setBool("invert", false);
+    screenShader.setBool("grayscale", false);
+    screenShader.setBool("edge", false);
+
+    glDisable(GL_DEPTH_TEST);
+
     glBindVertexArray(quadVAO);
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, textureColorbuffer);
+
+    screenShader.setInt("screenTexture", 0);
+
     glDrawArrays(GL_TRIANGLES, 0, 6);
-    
-    // Limpiar programa
-    glDeleteProgram(shaderProgram);
 }
+
