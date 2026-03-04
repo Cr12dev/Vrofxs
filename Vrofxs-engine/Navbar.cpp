@@ -97,3 +97,36 @@ void renderProperties() {
     ImGui::End();
     }
 }
+
+unsigned int gridVAO, gridVBO;
+
+void renderGrid(int size, float spacing)
+{
+    // Setup grid if not already done or if parameters changed
+    static int lastSize = -1;
+    static float lastSpacing = -1.0f;
+
+    if (lastSize != size || lastSpacing != spacing) {
+        setupGrid(size, spacing);
+        lastSize = size;
+        lastSpacing = spacing;
+    }
+
+    gridShader.use();
+    gridShader.setVec3("lineColor", glm::vec3(0.7f, 0.7f, 0.7f)); // gris
+
+    // Get the current view and projection matrices
+    glm::mat4 view = camera.GetViewMatrix();
+    int width, height;
+    glfwGetWindowSize(glfwGetCurrentContext(), &width, &height);
+    glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)width / (float)height, 0.1f, 100.0f);
+
+    // Set matrices for the grid shader
+    gridShader.setMat4("view", view);
+    gridShader.setMat4("projection", projection);
+    gridShader.setMat4("model", glm::mat4(1.0f)); // Identity matrix for grid at origin
+
+    glBindVertexArray(gridVAO);
+    glDrawArrays(GL_LINES, 0, gridVertices.size() / 3);
+    glBindVertexArray(0);
+}

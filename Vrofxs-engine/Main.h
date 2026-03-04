@@ -17,6 +17,7 @@
 #include "Axis.h"
 #include "Main.h"
 #include "Navbar.h"
+#include "GridCalc.h"
 
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
@@ -25,7 +26,9 @@ extern glm::vec3 cubePosition;
 extern glm::vec3 backgroundColor;
 extern Camera camera;
 extern float deltaTime;
+extern Shader gridShader;
 
+void renderGrid(int size, float spacing);
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);

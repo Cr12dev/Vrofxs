@@ -63,6 +63,9 @@
     <ClCompile Include="Navbar.cpp">
       <Filter>Archivos de origen</Filter>
     </ClCompile>
+    <ClCompile Include="GridCalc.cpp">
+      <Filter>Archivos de origen</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Axis.h">
@@ -89,6 +92,9 @@
     <ClInclude Include="Main.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
+    <ClInclude Include="GridCalc.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\axis.frag">
@@ -107,6 +113,12 @@
       <Filter>Archivos de origen\shaders</Filter>
     </None>
     <None Include="shaders\screen.vert">
+      <Filter>Archivos de origen\shaders</Filter>
+    </None>
+    <None Include="grid.vert">
+      <Filter>Archivos de origen\shaders</Filter>
+    </None>
+    <None Include="grid.frag">
       <Filter>Archivos de origen\shaders</Filter>
     </None>
   </ItemGroup>

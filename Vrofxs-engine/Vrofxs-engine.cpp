@@ -17,6 +17,7 @@ bool inspectorVisible = false;
 
 glm::vec3 cubePosition(0.0f, 0.0f, 0.0f);
 glm::vec3 backgroundColor(0.2f, 0.4f, 0.8f);
+Shader gridShader("shaders/grid.vert", "shaders/grid.frag");
 
 // Variables para post-procesamiento
 unsigned int framebuffer, textureColorbuffer, rbo;
@@ -160,9 +161,12 @@ int main() {
         ImGui::NewFrame();
 
         // Renderizar inspector con ImGui
+        int size;
+        float spacing;
         renderNavbar();
         renderInspector();
         renderProperties();
+        renderGrid(size = 1, spacing = 1.0f);
         
 
         // Renderizar ImGui
