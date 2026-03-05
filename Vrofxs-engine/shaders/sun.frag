@@ -1,27 +1,28 @@
 #version 330 core
 
 in vec3 FragPos;
+in vec3 Normal;
 
 out vec4 FragColor;
 
 uniform vec3 sunColor;
-uniform vec3 viewPos;
 
 void main()
 {
-    // vector cámara → fragmento
-    vec3 viewDir = normalize(viewPos - FragPos);
+    // Distancia desde el centro usando la normal
+    float dist = length(Normal);
 
-    // efecto fresnel para borde brillante
-    float fresnel = pow(1.0 - max(dot(viewDir, vec3(0.0,0.0,1.0)), 0.0), 3.0);
+    // Núcleo brillante
+    float core = 1.0 - dist;
+    core = clamp(core, 0.0, 1.0);
+    core = pow(core, 2.0);
 
-    // brillo base del sol
-    float intensity = 1.2;
+    // Halo exterior
+    float glow = exp(-dist * 4.0);
 
-    // glow suave
-    float glow = fresnel * 0.8;
+    float intensity = core + glow * 0.5;
 
-    vec3 color = sunColor * (intensity + glow);
+    vec3 color = sunColor * intensity;
 
     FragColor = vec4(color, 1.0);
 }

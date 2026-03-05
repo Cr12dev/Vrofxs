@@ -44,3 +44,11 @@ void renderPostProcessing();
 void renderDirectScene(Shader& screenShader);
 void renderNavbar();
 
+// Shadow mapping
+extern unsigned int shadowMapFBO;
+extern unsigned int shadowMapTexture;
+extern const unsigned int SHADOW_WIDTH;
+extern const unsigned int SHADOW_HEIGHT;
+void setupShadowMap();
+glm::mat4 getLightSpaceMatrix();
+

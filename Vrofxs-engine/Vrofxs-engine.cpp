@@ -24,6 +24,12 @@ bool showGrid = true; // Show grid by default
 unsigned int framebuffer, textureColorbuffer, rbo;
 unsigned int quadVAO, quadVBO;
 
+// Variables para shadow mapping
+unsigned int shadowMapFBO;
+unsigned int shadowMapTexture;
+const unsigned int SHADOW_WIDTH = 2048;
+const unsigned int SHADOW_HEIGHT = 2048;
+
 // Efectos de post-procesamiento
 bool postProcessEnabled = true;
 bool invertEffect = false;
@@ -110,6 +116,9 @@ int main() {
     // Configurar post-procesamiento con más retraso
     setupPostProcessing();
 
+    // Configurar shadow mapping
+    setupShadowMap();
+
     // Obtener dimensiones reales de la ventana después de maximizar
     int actualWidth, actualHeight;
     glfwGetWindowSize(window, &actualWidth, &actualHeight);
@@ -120,6 +129,8 @@ int main() {
     // Actualizar proyección con dimensiones reales
     glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)actualWidth / (float)actualHeight, 0.1f, 100.0f);
 
+    Shader depthShader("shaders/shadow_depth.vert", "shaders/shadow_depth.frag");
+
     while (!glfwWindowShouldClose(window)) {
         float currentFrame = glfwGetTime();
         deltaTime = currentFrame - lastFrame;
@@ -127,6 +138,25 @@ int main() {
 
         processInput(window);
 
+        // ===== PRIMER PASO: RENDERIZAR SHADOW MAP (desde perspectiva de la luz) =====
+        glBindFramebuffer(GL_FRAMEBUFFER, shadowMapFBO);
+        glViewport(0, 0, SHADOW_WIDTH, SHADOW_HEIGHT);
+        glClear(GL_DEPTH_BUFFER_BIT);
+        glEnable(GL_DEPTH_TEST);
+        
+        depthShader.use();
+        
+        glm::mat4 lightSpaceMatrix = getLightSpaceMatrix();
+        depthShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
+        depthShader.setMat4("model", cube.GetModelMatrix());
+        cube.Draw(depthShader, camera);
+        
+        // Restaurar viewport normal
+        int actualWidth, actualHeight;
+        glfwGetWindowSize(window, &actualWidth, &actualHeight);
+        glViewport(0, 0, actualWidth, actualHeight);
+        
+        // ===== SEGUNDO PASO: RENDERIZAR ESCENA NORMAL CON SOMBRAS =====
         // Renderizar a framebuffer (FONDO ESCENARIO)
         glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
         //glClearColor(0.1f, 0.1f, 0.1f, 1.0f); //Negro default
@@ -136,20 +166,31 @@ int main() {
 
         glm::mat4 view = camera.GetViewMatrix();
 
-        // Renderizar cubo con iluminación
+        // Renderizar cubo con iluminación y sombras
         lightShader.use();
         lightShader.setMat4("projection", projection);
         lightShader.setMat4("view", view);
+        lightShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
         cube.SetPosition(cubePosition);
         lightShader.setMat4("model", cube.GetModelMatrix());
-        lightShader.setVec3("lightPos", glm::vec3(2.0f, 2.0f, 2.0f));
+        lightShader.setVec3("lightPos", glm::vec3(2.0f, 4.0f, 2.0f));
         lightShader.setVec3("lightColor", glm::vec3(1.0f, 1.0f, 1.0f));
+        lightShader.setVec3("lightDir", glm::vec3(0.0f, -1.0f, 0.0f));
         lightShader.setVec3("objectColor", glm::vec3(0.5f, 0.3f, 0.8f));
         lightShader.setVec3("viewPos", camera.Position);
-        cubeShader.setVec3("lightColor", glm::vec3(1.0f, 1.0f, 1.0f));
-        cubeShader.setVec3("objectColor", glm::vec3(0.5f, 0.3f, 0.8f));
-        cubeShader.setVec3("viewPos", camera.Position);
-        cube.Draw();
+        lightShader.setFloat("shininess", 32.0f);
+        lightShader.setFloat("ambient", 0.3f);
+        lightShader.setFloat("diffuse", 0.8f);
+        lightShader.setFloat("specular", 0.5f);
+        lightShader.setFloat("shadowBias", 0.005f);
+        lightShader.setInt("pcfSamples", 2);
+        
+        // Activar shadow map en texture unit 1
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, shadowMapTexture);
+        lightShader.setInt("shadowMap", 1);
+        
+        cube.Draw(lightShader, camera);
 
         // Renderizar ejes cartesianos (se mueven con el cubo)
         axisShader.use();
@@ -587,3 +628,41 @@ void renderDirectScene(Shader& screenShader)
     glDrawArrays(GL_TRIANGLES, 0, 6);
 }
 
+
+void setupShadowMap()
+{
+    // Crear framebuffer para shadow map
+    glGenFramebuffers(1, &shadowMapFBO);
+    
+    // Crear textura de profundidad
+    glGenTextures(1, &shadowMapTexture);
+    glBindTexture(GL_TEXTURE_2D, shadowMapTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, SHADOW_WIDTH, SHADOW_HEIGHT, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+    float borderColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+    
+    // Adjuntar textura de profundidad al framebuffer
+    glBindFramebuffer(GL_FRAMEBUFFER, shadowMapFBO);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, shadowMapTexture, 0);
+    glDrawBuffer(GL_NONE);
+    glReadBuffer(GL_NONE);
+    
+    if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+        std::cout << "ERROR::SHADOWMAP:: Framebuffer no esta completo!" << std::endl;
+    
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
+
+glm::mat4 getLightSpaceMatrix()
+{
+    // Configurar matrices para renderizar desde la perspectiva de la luz
+    glm::mat4 lightProjection = glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, 1.0f, 20.0f);
+    glm::vec3 lightPos = glm::vec3(2.0f, 8.0f, 2.0f);
+    glm::vec3 lightTarget = glm::vec3(0.0f, 0.0f, 0.0f);
+    glm::mat4 lightView = glm::lookAt(lightPos, lightTarget, glm::vec3(0.0f, 1.0f, 0.0f));
+    return lightProjection * lightView;
+}

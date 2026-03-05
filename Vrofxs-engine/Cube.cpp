@@ -1,4 +1,6 @@
 #include "include/Cube.h"
+#include "include/Shader.h"
+#include "include/Camera.h"
 #include <GLFW/glfw3.h>
 #include <vector>
 
@@ -14,44 +16,46 @@ void Cube::CreateCubeMesh() {
 
     float size = 0.5f;
 
+    // Vértices con normales
     vertices = {
         // Front
-        {{-size, -size,  size}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f}},
-        {{ size, -size,  size}, {0.0f, 0.0f, 1.0f}, {1.0f, 0.0f}},
-        {{ size,  size,  size}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-        {{-size,  size,  size}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+        {{-size,-size, size}, {0,0,1}, {0,0}},
+        {{ size,-size, size}, {0,0,1}, {1,0}},
+        {{ size, size, size}, {0,0,1}, {1,1}},
+        {{-size, size, size}, {0,0,1}, {0,1}},
 
         // Back
-        {{-size, -size, -size}, {0.0f, 0.0f, -1.0f}, {1.0f, 0.0f}},
-        {{-size,  size, -size}, {0.0f, 0.0f, -1.0f}, {1.0f, 1.0f}},
-        {{ size,  size, -size}, {0.0f, 0.0f, -1.0f}, {0.0f, 1.0f}},
-        {{ size, -size, -size}, {0.0f, 0.0f, -1.0f}, {0.0f, 0.0f}},
+        {{-size,-size,-size}, {0,0,-1}, {1,0}},
+        {{-size, size,-size}, {0,0,-1}, {1,1}},
+        {{ size, size,-size}, {0,0,-1}, {0,1}},
+        {{ size,-size,-size}, {0,0,-1}, {0,0}},
 
         // Top
-        {{-size,  size, -size}, {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f}},
-        {{-size,  size,  size}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-        {{ size,  size,  size}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-        {{ size,  size, -size}, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f}},
+        {{-size, size,-size}, {0,1,0}, {0,1}},
+        {{-size, size, size}, {0,1,0}, {0,0}},
+        {{ size, size, size}, {0,1,0}, {1,0}},
+        {{ size, size,-size}, {0,1,0}, {1,1}},
 
         // Bottom
-        {{-size, -size, -size}, {0.0f, -1.0f, 0.0f}, {1.0f, 1.0f}},
-        {{ size, -size, -size}, {0.0f, -1.0f, 0.0f}, {0.0f, 1.0f}},
-        {{ size, -size,  size}, {0.0f, -1.0f, 0.0f}, {0.0f, 0.0f}},
-        {{-size, -size,  size}, {0.0f, -1.0f, 0.0f}, {1.0f, 0.0f}},
+        {{-size,-size,-size}, {0,-1,0}, {1,1}},
+        {{ size,-size,-size}, {0,-1,0}, {0,1}},
+        {{ size,-size, size}, {0,-1,0}, {0,0}},
+        {{-size,-size, size}, {0,-1,0}, {1,0}},
 
         // Right
-        {{ size, -size, -size}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-        {{ size,  size, -size}, {1.0f, 0.0f, 0.0f}, {1.0f, 1.0f}},
-        {{ size,  size,  size}, {1.0f, 0.0f, 0.0f}, {0.0f, 1.0f}},
-        {{ size, -size,  size}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+        {{ size,-size,-size}, {1,0,0}, {1,0}},
+        {{ size, size,-size}, {1,0,0}, {1,1}},
+        {{ size, size, size}, {1,0,0}, {0,1}},
+        {{ size,-size, size}, {1,0,0}, {0,0}},
 
         // Left
-        {{-size, -size, -size}, {-1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-        {{-size, -size,  size}, {-1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-        {{-size,  size,  size}, {-1.0f, 0.0f, 0.0f}, {1.0f, 1.0f}},
-        {{-size,  size, -size}, {-1.0f, 0.0f, 0.0f}, {0.0f, 1.0f}}
+        {{-size,-size,-size}, {-1,0,0}, {0,0}},
+        {{-size,-size, size}, {-1,0,0}, {1,0}},
+        {{-size, size, size}, {-1,0,0}, {1,1}},
+        {{-size, size,-size}, {-1,0,0}, {0,1}}
     };
 
+    // Índices
     indices = {
         0,1,2, 0,2,3,      // Front
         4,5,6, 4,6,7,      // Back
@@ -67,16 +71,11 @@ void Cube::CreateCubeMesh() {
 glm::mat4 Cube::GetModelMatrix() const {
     glm::mat4 model(1.0f);
     model = glm::translate(model, position);
-    model = glm::rotate(model, glm::radians(rotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
-    model = glm::rotate(model, glm::radians(rotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
-    model = glm::rotate(model, glm::radians(rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
+    model = glm::rotate(model, glm::radians(rotation.x), glm::vec3(1, 0, 0));
+    model = glm::rotate(model, glm::radians(rotation.y), glm::vec3(0, 1, 0));
+    model = glm::rotate(model, glm::radians(rotation.z), glm::vec3(0, 0, 1));
     model = glm::scale(model, scale);
     return model;
-}
-
-void Cube::Draw() const {
-    if (mesh)
-        mesh->Draw();
 }
 
 void Cube::Draw(Shader& shader, Camera& camera) const {
@@ -84,17 +83,11 @@ void Cube::Draw(Shader& shader, Camera& camera) const {
 
     shader.use();
 
-    // Material y luz
-    shader.setVec3("objectColor", glm::vec3(0.8f, 0.8f, 0.8f));
-    shader.setFloat("shininess", 32.0f);
-    shader.setVec3("lightPos", glm::vec3(2.0f, 2.0f, 2.0f));
-    shader.setVec3("lightColor", glm::vec3(1.0f, 0.95f, 0.8f));
-    shader.setVec3("lightDir", glm::vec3(0.0f, -1.0f, 0.0f));
-    shader.setFloat("ambient", 0.2f);
-    shader.setFloat("diffuse", 1.0f);
-    shader.setFloat("specular", 0.5f);
+    // Configuración de luz y material
+    shader.setVec3("lightPos", glm::vec3(2, 2, 2));
+    shader.setVec3("lightColor", glm::vec3(1, 1, 1));
+    shader.setVec3("viewPos", camera.Position);
 
-    // Matrices
     shader.setMat4("model", GetModelMatrix());
     shader.setMat4("view", camera.GetViewMatrix());
 
@@ -106,10 +99,5 @@ void Cube::Draw(Shader& shader, Camera& camera) const {
     mesh->Draw();
 }
 
-void Cube::SetPosition(glm::vec3 pos) {
-    position = pos;
-}
-
-void Cube::Move(glm::vec3 offset) {
-    position += offset;
-}
+void Cube::SetPosition(glm::vec3 pos) { position = pos; }
+void Cube::Move(glm::vec3 offset) { position += offset; }
