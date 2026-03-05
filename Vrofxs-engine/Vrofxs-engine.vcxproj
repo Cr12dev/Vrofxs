@@ -143,6 +143,7 @@
     <ClCompile Include="Light.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="Navbar.cpp" />
+    <ClCompile Include="Objects.cpp" />
     <ClCompile Include="Shader.cpp" />
     <ClCompile Include="Sun.cpp" />
     <ClCompile Include="Vrofxs-engine.cpp" />
@@ -150,12 +151,13 @@
   <ItemGroup>
     <ClInclude Include="Axis.h" />
     <ClInclude Include="Camera.h" />
-    <ClInclude Include="GridCalc.h" />
     <ClInclude Include="include\Cube.h" />
+    <ClInclude Include="include\GridCalc.h" />
     <ClInclude Include="include\Light.h" />
+    <ClInclude Include="include\Main.h" />
+    <ClInclude Include="include\Objects.h" />
     <ClInclude Include="include\Sun.h" />
     <ClInclude Include="Inspector.h" />
-    <ClInclude Include="Main.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="Navbar.h" />
     <ClInclude Include="Shader.h" />

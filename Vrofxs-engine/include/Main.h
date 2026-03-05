@@ -20,6 +20,10 @@
 #include "GridCalc.h"
 #include "Sun.h"
 #include "Light.h"
+#include "Objects.h"
+
+// Forward declaration
+class SceneObject;
 
 const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
@@ -32,13 +36,16 @@ extern Shader gridShader;
 extern bool showGrid;
 
 void renderGrid(int size, float spacing);
+void renderHierarchy();
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
 void mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow* window);
 void renderInspector();
+void renderProperties();
 bool checkCubeClick(double xpos, double ypos);
+bool checkCubeClickOnObject(double xpos, double ypos, SceneObject* obj);
 void setupPostProcessing();
 void renderPostProcessing();
 void renderDirectScene(Shader& screenShader);

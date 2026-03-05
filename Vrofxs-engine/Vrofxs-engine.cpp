@@ -14,6 +14,7 @@ bool mousePressed = false;
 bool cameraLookEnabled = false;
 bool touchpadScroll = false;
 bool inspectorVisible = false;
+bool axisVisible = false;
 
 glm::vec3 cubePosition(0.0f, 0.0f, 0.0f);
 glm::vec3 backgroundColor(0.2f, 0.4f, 0.8f);
@@ -36,6 +37,8 @@ bool invertEffect = false;
 bool grayscaleEffect = false;
 bool edgeEffect = false;
 
+// Cubo estático global para renderizado - se inicializa después de OpenGL
+static Cube* g_renderCube = nullptr;
 
 int main() {
     glfwInit();
@@ -74,6 +77,9 @@ int main() {
         return -1;
     }
 
+    // Inicializar cubo estático DESPUÉS de que OpenGL esté listo
+    g_renderCube = new Cube(glm::vec3(0,0,0));
+
     glEnable(GL_DEPTH_TEST);
 
     // Esperas adicionales antes de inicializar componentes complejos
@@ -106,7 +112,7 @@ int main() {
     gridVAO = 0;
     gridVBO = 0;
 
-    Cube cube(cubePosition);
+    // Cube cube(cubePosition);  // Comentado: usar SceneManager para crear objetos
     Axis axis;
     Sun sun(glm::vec3(0.0f, 10.0f, -5.0f), glm::vec3(1.0f, 0.9f, 0.0f), 1.0f);
 
@@ -148,8 +154,8 @@ int main() {
         
         glm::mat4 lightSpaceMatrix = getLightSpaceMatrix();
         depthShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
-        depthShader.setMat4("model", cube.GetModelMatrix());
-        cube.Draw(depthShader, camera);
+        // depthShader.setMat4("model", cube.GetModelMatrix());
+        // cube.Draw(depthShader, camera);
         
         // Restaurar viewport normal
         int actualWidth, actualHeight;
@@ -157,6 +163,11 @@ int main() {
         glViewport(0, 0, actualWidth, actualHeight);
         
         // ===== SEGUNDO PASO: RENDERIZAR ESCENA NORMAL CON SOMBRAS =====
+        glEnable(GL_DEPTH_TEST);
+        glEnable(GL_CULL_FACE);
+        glCullFace(GL_BACK);
+        glFrontFace(GL_CCW);
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         // Renderizar a framebuffer (FONDO ESCENARIO)
         glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
         //glClearColor(0.1f, 0.1f, 0.1f, 1.0f); //Negro default
@@ -166,13 +177,15 @@ int main() {
 
         glm::mat4 view = camera.GetViewMatrix();
 
+
+
         // Renderizar cubo con iluminación y sombras
         lightShader.use();
         lightShader.setMat4("projection", projection);
         lightShader.setMat4("view", view);
         lightShader.setMat4("lightSpaceMatrix", lightSpaceMatrix);
-        cube.SetPosition(cubePosition);
-        lightShader.setMat4("model", cube.GetModelMatrix());
+        // cube.SetPosition(cubePosition);
+        // lightShader.setMat4("model", cube.GetModelMatrix());
         lightShader.setVec3("lightPos", glm::vec3(2.0f, 4.0f, 2.0f));
         lightShader.setVec3("lightColor", glm::vec3(1.0f, 1.0f, 1.0f));
         lightShader.setVec3("lightDir", glm::vec3(0.0f, -1.0f, 0.0f));
@@ -190,16 +203,38 @@ int main() {
         glBindTexture(GL_TEXTURE_2D, shadowMapTexture);
         lightShader.setInt("shadowMap", 1);
         
-        cube.Draw(lightShader, camera);
+        // cube.Draw(lightShader, camera);
 
-        // Renderizar ejes cartesianos (se mueven con el cubo)
-        axisShader.use();
-        axisShader.setMat4("projection", projection);
-        axisShader.setMat4("view", view);
-        glm::mat4 axisModel = glm::mat4(1.0f);
-        axisModel = glm::translate(axisModel, cubePosition);
-        axisShader.setMat4("model", axisModel);
-        axis.Draw(view, projection);
+        // Renderizar objetos del SceneManager
+        auto& manager = SceneManager::GetInstance();
+        
+        if (g_renderCube) {
+            for (auto& obj : manager.objects) {
+                if (!obj->visible) continue;
+                
+                if (obj->type == ObjectType::Cube) {
+                    // Aplicar matriz de transformación del objeto
+                    glm::mat4 modelMatrix = obj->GetWorldMatrix();
+                    lightShader.setMat4("model", modelMatrix);
+                    // Usar mesh directamente para no sobrescribir la matriz
+                    if (g_renderCube->mesh) {
+                        g_renderCube->mesh->Draw();
+                    }
+                }
+            }
+        }
+
+        // Renderizar ejes cartesianos en la posición del objeto seleccionado
+        SceneObject* selected = SceneManager::GetInstance().GetSelected();
+        if (selected && axisVisible) {
+            axisShader.use();
+            axisShader.setMat4("projection", projection);
+            axisShader.setMat4("view", view);
+            glm::mat4 axisModel = glm::mat4(1.0f);
+            axisModel = glm::translate(axisModel, selected->GetWorldPosition());
+            axisShader.setMat4("model", axisModel);
+            axis.Draw(view, projection);
+        }
 
         // Volver al framebuffer por defecto
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -224,6 +259,7 @@ int main() {
         // Renderizar inspector con ImGui
         int size;
         float spacing;
+        renderHierarchy();
         renderNavbar();
         renderInspector();
         renderProperties();
@@ -325,8 +361,12 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
         float xoffset = xpos - lastX;
         float yoffset = lastY - ypos;
 
-        cubePosition.x += xoffset * 0.01f;
-        cubePosition.y += yoffset * 0.01f;
+        // Mover el objeto seleccionado del SceneManager
+        SceneObject* selected = SceneManager::GetInstance().GetSelected();
+        if (selected) {
+            selected->transform.position.x += xoffset * 0.01f;
+            selected->transform.position.y += yoffset * 0.01f;
+        }
 
         lastX = xpos;
         lastY = ypos;
@@ -374,9 +414,20 @@ void mouse_button_callback(GLFWwindow* window, int button, int action, int mods)
             double xpos, ypos;
             glfwGetCursorPos(window, &xpos, &ypos);
 
-            // Verificar si se hizo clic en el cubo
-            if (checkCubeClick(xpos, ypos)) {
-                inspectorVisible = !inspectorVisible;  // Toggle del inspector
+            // Verificar si se hizo clic en algun objeto
+            SceneObject* clicked = nullptr;
+            auto& manager = SceneManager::GetInstance();
+            for (auto& obj : manager.objects) {
+                if (obj->type == ObjectType::Cube && checkCubeClickOnObject(xpos, ypos, obj.get())) {
+                    clicked = obj.get();
+                    break;
+                }
+            }
+            
+            if (clicked) {
+                manager.SelectObject(clicked);
+                axisVisible = true;
+                inspectorVisible = true;
             }
 
             mousePressed = true;
@@ -451,7 +502,111 @@ bool checkCubeClick(double xpos, double ypos) {
     return distance < clickThreshold;
 }
 
-/* --- Renderizar panel inspector de objeto ---*/
+bool checkCubeClickOnObject(double xpos, double ypos, SceneObject* obj) {
+    if (!obj) return false;
+    
+    int width, height;
+    glfwGetWindowSize(glfwGetCurrentContext(), &width, &height);
+    
+    float clickThreshold = 200.0f;
+    glm::vec3 pos = obj->GetWorldPosition();
+    
+    glm::vec4 screenPos = glm::vec4(pos, 1.0f);
+    glm::mat4 view = camera.GetViewMatrix();
+    glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)width / (float)height, 0.1f, 100.0f);
+    
+    screenPos = projection * view * screenPos;
+    
+    if (screenPos.w != 0.0f) {
+        screenPos.x /= screenPos.w;
+        screenPos.y /= screenPos.w;
+    }
+    
+    float screenX = (screenPos.x + 1.0f) * width / 2.0f;
+    float screenY = (1.0f - screenPos.y) * height / 2.0f;
+    
+    float distance = sqrt(pow(xpos - screenX, 2) + pow(ypos - screenY, 2));
+    
+    return distance < clickThreshold;
+}
+
+/* --- Renderizar jerarquía de objetos ---*/
+void renderHierarchy() {
+    ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(250, 400), ImGuiCond_FirstUseEver);
+    
+    ImGuiWindowFlags flags = ImGuiWindowFlags_NoCollapse;
+    
+    if (ImGui::Begin("Hierarchy", nullptr, flags)) {
+        // Botones de acción
+        if (ImGui::Button("Create Empty")) {
+            static int emptyCount = 0;
+            SceneManager::GetInstance().CreateEmpty("Empty" + std::to_string(emptyCount++));
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Create Cube")) {
+            static int cubeCount = 0;
+            auto newCube = SceneManager::GetInstance().CreateCube("Cube" + std::to_string(cubeCount++), glm::vec3(0, 0, 0));
+            // Seleccionar automáticamente y mostrar ejes
+            SceneManager::GetInstance().SelectObject(newCube.get());
+            axisVisible = true;
+            cubePosition = newCube->transform.position;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Delete")) {
+            SceneManager::GetInstance().DeleteSelected();
+        }
+        
+        ImGui::Separator();
+        
+        // Lista de objetos
+        auto& manager = SceneManager::GetInstance();
+        ImGui::Text("Objects (%d):", manager.GetObjectCount());
+        ImGui::Spacing();
+        
+        for (auto& obj : manager.objects) {
+            ImGuiTreeNodeFlags nodeFlags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+            
+            if (obj->selected) {
+                nodeFlags |= ImGuiTreeNodeFlags_Selected;
+            }
+            
+            // Icono según tipo
+            const char* icon = "?";
+            switch (obj->type) {
+                case ObjectType::Cube: icon = "■"; break;
+                case ObjectType::Empty: icon = "○"; break;
+                default: icon = "?"; break;
+            }
+            
+            std::string label = std::string(icon) + " " + obj->name;
+            
+            bool isOpen = ImGui::TreeNodeEx(label.c_str(), nodeFlags);
+            
+            // Click para seleccionar
+            if (ImGui::IsItemClicked()) {
+                manager.SelectObject(obj.get());
+                axisVisible = true;  // Mostrar ejes al seleccionar
+                inspectorVisible = true;
+                // Sincronizar con posición del cubo actual
+                cubePosition = obj->transform.position;
+            }
+        }
+        
+        // Si hay objeto seleccionado, mostrar info
+        SceneObject* selected = manager.GetSelected();
+        if (selected) {
+            ImGui::Separator();
+            ImGui::Text("Selected: %s", selected->name.c_str());
+            ImGui::Text("Type: %d", (int)selected->type);
+            ImGui::Text("Position: %.2f, %.2f, %.2f", 
+                selected->transform.position.x,
+                selected->transform.position.y,
+                selected->transform.position.z);
+        }
+    }
+    ImGui::End();
+}
 void renderInspector() {
     if (!inspectorVisible) return;
 
@@ -471,48 +626,49 @@ void renderInspector() {
 
     // Crear ventana del inspector
     if (ImGui::Begin("Inspector", &inspectorVisible, flags)) {
-        ImGui::Text("Posicion del Cubo:");
+        SceneObject* selected = SceneManager::GetInstance().GetSelected();
+        
+        if (selected) {
+            ImGui::Text("Selected: %s", selected->name.c_str());
+            ImGui::Separator();
+            ImGui::Text("Position:");
 
-        // Mostrar coordenadas X, Y, Z
-        ImGui::PushItemWidth(200);
+            // Mostrar coordenadas X, Y, Z del objeto seleccionado
+            ImGui::PushItemWidth(200);
 
-        // Coordenada X
-        ImGui::Text("X:");
-        ImGui::SameLine();
-        float xVal = cubePosition.x;
-        if (ImGui::DragFloat("##X", &xVal, 0.1f)) {
-            cubePosition.x = xVal;
-        }
+            float xVal = selected->transform.position.x;
+            float yVal = selected->transform.position.y;
+            float zVal = selected->transform.position.z;
 
-        // Coordenada Y
-        ImGui::Text("Y:");
-        ImGui::SameLine();
-        float yVal = cubePosition.y;
-        if (ImGui::DragFloat("##Y", &yVal, 0.1f)) {
-            cubePosition.y = yVal;
-        }
+            ImGui::Text("X:");
+            ImGui::SameLine();
+            if (ImGui::DragFloat("##X", &xVal, 0.1f)) {
+                selected->transform.position.x = xVal;
+            }
 
-        // Coordenada Z
-        ImGui::Text("Z:");
-        ImGui::SameLine();
-        float zVal = cubePosition.z;
-        if (ImGui::DragFloat("##Z", &zVal, 0.1f)) {
-            cubePosition.z = zVal;
-        }
+            ImGui::Text("Y:");
+            ImGui::SameLine();
+            if (ImGui::DragFloat("##Y", &yVal, 0.1f)) {
+                selected->transform.position.y = yVal;
+            }
 
-        ImGui::PopItemWidth();
+            ImGui::Text("Z:");
+            ImGui::SameLine();
+            if (ImGui::DragFloat("##Z", &zVal, 0.1f)) {
+                selected->transform.position.z = zVal;
+            }
 
-        ImGui::Separator();
+            ImGui::PopItemWidth();
 
-        // Mostrar valores actuales
-        ImGui::Text("Valores Actuales:");
-        ImGui::Text("X: %.2f", cubePosition.x);
-        ImGui::Text("Y: %.2f", cubePosition.y);
-        ImGui::Text("Z: %.2f", cubePosition.z);
+            ImGui::Separator();
 
-        // Botón para resetear posición
-        if (ImGui::Button("Resetear Posicion")) {
-            cubePosition = glm::vec3(0.0f, 0.0f, 0.0f);
+            // Botón para resetear posición
+            if (ImGui::Button("Reset Position")) {
+                selected->transform.position = glm::vec3(0.0f, 0.0f, 0.0f);
+            }
+        } else {
+            ImGui::Text("No object selected");
+            ImGui::Text("Click 'Create Cube' to add an object");
         }
 
         ImGui::Separator();
@@ -528,14 +684,6 @@ void renderInspector() {
         }
     }
     ImGui::End();
-
-    // También mostrar en consola para compatibilidad
-    std::cout << "\r=== INSPECTOR ===" << std::endl;
-    std::cout << "Posicion Cubo:" << std::endl;
-    std::cout << "  X: " << cubePosition.x << std::endl;
-    std::cout << "  Y: " << cubePosition.y << std::endl;
-    std::cout << "  Z: " << cubePosition.z << std::endl;
-    std::cout << "=================" << std::flush;
 }
 
 void setupPostProcessing() {
@@ -591,8 +739,8 @@ void setupPostProcessing() {
 void renderPostProcessing() {
     if (!postProcessEnabled) return;
 
-    // Usar shader de post-procesamiento
-    Shader screenShader("shaders/screen.vert", "shaders/screen.frag");
+    // Shader estático - solo se crea una vez
+    static Shader screenShader("shaders/screen.vert", "shaders/screen.frag");
     screenShader.use();
 
     // Configurar uniforms para efectos

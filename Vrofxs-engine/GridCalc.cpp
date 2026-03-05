@@ -62,6 +62,13 @@ void renderGrid(int size, float spacing)
         return;
     }
     
+    // Guardar estado actual de depth test
+    GLboolean depthTestEnabled;
+    glGetBooleanv(GL_DEPTH_TEST, &depthTestEnabled);
+    
+    // Habilitar depth test para que el grid respete la profundidad
+    glEnable(GL_DEPTH_TEST);
+    
     gridShader.use();
     gridShader.setVec3("lineColor", glm::vec3(0.7f, 0.7f, 0.7f)); // gris
     
@@ -79,4 +86,9 @@ void renderGrid(int size, float spacing)
     glBindVertexArray(gridVAO);
     glDrawArrays(GL_LINES, 0, gridVertices.size() / 3);
     glBindVertexArray(0);
+    
+    // Restaurar estado anterior de depth test si estaba deshabilitado
+    if (!depthTestEnabled) {
+        glDisable(GL_DEPTH_TEST);
+    }
 }
