@@ -169,6 +169,8 @@
     <None Include="shaders\cube.vert" />
     <None Include="shaders\screen.frag" />
     <None Include="shaders\screen.vert" />
+    <None Include="shaders\sun.frag" />
+    <None Include="shaders\sun.vert" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

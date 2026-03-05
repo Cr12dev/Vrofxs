@@ -191,9 +191,18 @@ int main() {
         if (showGrid) {
             renderGrid(size = 20, spacing = 1.0f);
         }
+
+        float sunDistance = 50.0f; // distancia fija del sol
+        glm::vec3 sunDirection = glm::normalize(glm::vec3(0.3f, 1.0f, 0.2f)); // dirección del sol
+        sun.updatePosition(camera.Position + sunDirection * sunDistance);
         
         // Renderizar el sol
-        sun.render(sunShader, camera.GetViewMatrix(), glm::perspective(glm::radians(camera.Zoom), (float)actualWidth / (float)actualHeight, 0.1f, 100.0f));
+        sun.render(
+            sunShader,
+            camera.GetViewMatrix(),
+            projection,
+            camera.Position
+        );
         
 
         // Renderizar ImGui

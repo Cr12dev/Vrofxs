@@ -133,5 +133,11 @@
     <None Include="grid.frag">
       <Filter>Archivos de origen\shaders</Filter>
     </None>
+    <None Include="shaders\sun.frag">
+      <Filter>Archivos de origen\shaders</Filter>
+    </None>
+    <None Include="shaders\sun.vert">
+      <Filter>Archivos de origen\shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>
