@@ -539,20 +539,23 @@ void renderHierarchy() {
     
     if (ImGui::Begin("Hierarchy", nullptr, flags)) {
         // Botones de acción
-        if (ImGui::Button("Create Empty")) {
-            static int emptyCount = 0;
-            SceneManager::GetInstance().CreateEmpty("Empty" + std::to_string(emptyCount++));
+        
+        if (ImGui::CollapsingHeader("Create a object")) {
+            if (ImGui::Button("Create Empty")) {
+                static int emptyCount = 0;
+                SceneManager::GetInstance().CreateEmpty("Empty" + std::to_string(emptyCount++));
+            }
+            if (ImGui::Button("Create Cube")) {
+                static int cubeCount = 0;
+                auto newCube = SceneManager::GetInstance().CreateCube("Cube" + std::to_string(cubeCount++), glm::vec3(0, 0, 0));
+                // Seleccionar automáticamente y mostrar ejes
+                SceneManager::GetInstance().SelectObject(newCube.get());
+                axisVisible = true;
+                cubePosition = newCube->transform.position;
+            }
         }
-        ImGui::SameLine();
-        if (ImGui::Button("Create Cube")) {
-            static int cubeCount = 0;
-            auto newCube = SceneManager::GetInstance().CreateCube("Cube" + std::to_string(cubeCount++), glm::vec3(0, 0, 0));
-            // Seleccionar automáticamente y mostrar ejes
-            SceneManager::GetInstance().SelectObject(newCube.get());
-            axisVisible = true;
-            cubePosition = newCube->transform.position;
-        }
-        ImGui::SameLine();
+        
+        ImGui::Separator();
         if (ImGui::Button("Delete")) {
             SceneManager::GetInstance().DeleteSelected();
         }

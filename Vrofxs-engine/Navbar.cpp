@@ -16,10 +16,10 @@ void renderNavbar()
                 cubePosition = glm::vec3(0.0f);
             }
             if (ImGui::MenuItem("Abrir")) {
-                // Acción: abrir archivo (a implementar)
+                LoadSceneFromFile();
             }
             if (ImGui::MenuItem("Guardar")) {
-                // Acción: guardar escena (a implementar)
+                SaveSceneToFile();
             }
             if (ImGui::MenuItem("Properties")) {
                 printf("### Executing PROPERTIES ###");

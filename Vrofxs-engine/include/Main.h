@@ -21,6 +21,7 @@
 #include "Sun.h"
 #include "Light.h"
 #include "Objects.h"
+#include "SceneSerializer.h"
 
 // Forward declaration
 class SceneObject;
